@@ -1,2 +1,7 @@
 
 *.npz
+.idea/CS420_ML_Project.iml
+__pycache__/Resnet.cpython-38.pyc
+__pycache__/dataloader.cpython-38.pyc
+*.pth
+*.xml
