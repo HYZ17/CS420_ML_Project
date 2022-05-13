@@ -22,5 +22,6 @@ tqdm
 #### Update
 
 * 添加了data loader和Resnet分类模型（5.12）
-
 * 使用pre-trained模型，对输入的图片进行归一化，准确率80.5%（5.13）
+* 使用LSTM编码了时间序列信息，修改Data Loader，截至目前准确率81.07%（5.13）
+

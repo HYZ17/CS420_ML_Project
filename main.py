@@ -25,13 +25,14 @@ def set_seed(seed):
 if __name__ == '__main__':
     set_seed(17)
     print("We are using",device)
-    data_dir=r"C:\Users\DELL\Desktop\CS420_ML_Project\picture"
+    png_dir=r"C:\Users\DELL\Desktop\CS420_ML_Project\picture"
+    seq_dir=r"C:\Users\DELL\Desktop\CS420_ML_Project\original_dataset"
     categories=['cow', 'panda', 'lion', 'tiger', 'raccoon', 'monkey', 'hedgehog', 'zebra', 'horse', 'owl','elephant', 'squirrel', 'sheep', 'dog', 'bear',
                 'kangaroo', 'whale', 'crocodile', 'rhinoceros', 'penguin', 'camel', 'flamingo', 'giraffe', 'pig','cat']
-
-    train_dataset=MyDataset(data_dir,categories,"train")
-    val_dataset=MyDataset(data_dir,categories,"valid")
-    test_dataset=MyDataset(data_dir,categories,"test")
+    # categories=['cow','panda']
+    train_dataset=MyDataset(png_dir,seq_dir,categories,"train",200)
+    val_dataset=MyDataset(png_dir,seq_dir,categories,"valid",200)
+    test_dataset=MyDataset(png_dir,seq_dir,categories,"test",200)
 
     train_dataset_size=train_dataset.__len__()
     val_dataset_size=val_dataset.__len__()
@@ -52,10 +53,12 @@ if __name__ == '__main__':
         total_train_acc=0
         total_val_acc=0
         for i,batch in enumerate(tqdm(train_dataloader)):
-            data_batch=batch[0].float().to(device)
-            data_batch=data_batch / 255.0 * 2.0 - 1.0
-            label_batch=batch[1].type(torch.LongTensor).to(device)
-            output=model(data_batch)
+            png_batch=batch[0].float().to(device)
+            png_batch=png_batch / 255.0 * 2.0 - 1.0
+            label_batch=batch[3].type(torch.LongTensor).to(device)
+            seq_batch=batch[1].float().to(device)
+            length_batch=batch[2].type(torch.int16).cpu()
+            output=model(png_batch,seq_batch,length_batch)
             loss=loss_func(output,label_batch)
             total_train_loss+=loss.data.item()
             optimizer.zero_grad()
@@ -70,10 +73,12 @@ if __name__ == '__main__':
         if (epoch)%1==0:
             model.eval()
             for i,batch in enumerate(tqdm(val_dataloader)):
-                data_batch=batch[0].float().to(device)
-                data_batch=data_batch/ 255.0 * 2.0 - 1.0
-                label_batch=batch[1].type(torch.LongTensor).to(device)
-                output=model(data_batch)
+                png_batch=batch[0].float().to(device)
+                png_batch=png_batch/ 255.0 * 2.0 - 1.0
+                label_batch=batch[3].type(torch.LongTensor).to(device)
+                seq_batch=batch[1].float().to(device)
+                length_batch=batch[2].type(torch.int16).cpu()
+                output=model(png_batch,seq_batch,length_batch)
                 val_pred_y=torch.max(output.cpu(),1)[1].data.numpy()
                 val_accuracy=(val_pred_y==label_batch.cpu().data.numpy()).astype(int).sum()
                 total_val_acc+=val_accuracy.item()
