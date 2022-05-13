@@ -23,3 +23,4 @@ tqdm
 
 * 添加了data loader和Resnet分类模型（5.12）
 
+* 使用pre-trained模型，对输入的图片进行归一化，准确率80.5%（5.13）

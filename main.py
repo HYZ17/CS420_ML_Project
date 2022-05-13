@@ -53,6 +53,7 @@ if __name__ == '__main__':
         total_val_acc=0
         for i,batch in enumerate(tqdm(train_dataloader)):
             data_batch=batch[0].float().to(device)
+            data_batch=data_batch / 255.0 * 2.0 - 1.0
             label_batch=batch[1].type(torch.LongTensor).to(device)
             output=model(data_batch)
             loss=loss_func(output,label_batch)
@@ -70,6 +71,7 @@ if __name__ == '__main__':
             model.eval()
             for i,batch in enumerate(tqdm(val_dataloader)):
                 data_batch=batch[0].float().to(device)
+                data_batch=data_batch/ 255.0 * 2.0 - 1.0
                 label_batch=batch[1].type(torch.LongTensor).to(device)
                 output=model(data_batch)
                 val_pred_y=torch.max(output.cpu(),1)[1].data.numpy()
@@ -87,12 +89,13 @@ if __name__ == '__main__':
 
 
     #Test with specific model
-    # model_path=r"C:\Users\DELL\Desktop\CS420_ML_Project\checkpoint_model_epoch_2_acc_0.78784.pth"
+    # model_path=r"C:\Users\DELL\Desktop\CS420_ML_Project\checkpoint_model_epoch_10_acc_0.802896.pth"
     # model=My_model(resnet_type="resnet18",num_classes=25).to(device)
     # model.load_parameters(model_path,device)
     # total_test_acc=0
     # for i,batch in enumerate(tqdm(test_dataloader)):
     #     data_batch=batch[0].float().to(device)
+    #     data_batch=data_batch/ 255.0 * 2.0 - 1.0
     #     label_batch=batch[1].type(torch.LongTensor).to(device)
     #     output=model(data_batch)
     #     test_pred_y=torch.max(output.cpu(),1)[1].data.numpy()
