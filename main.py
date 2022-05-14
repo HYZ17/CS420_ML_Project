@@ -86,12 +86,12 @@ if __name__ == '__main__':
             print("In epoch",epoch,",Validation Accuracy:",val_acc)
             if val_acc>best_accuracy or epoch%10==0:
                 best_accuracy=val_acc
-                filepath=os.path.join('test!!!!!checkpoint_model_epoch_{}_acc_{}.pth'.format(epoch,val_acc))  #最终参数模型
+                filepath=os.path.join('checkpoint_model_epoch_{}_acc_{}.pth'.format(epoch,val_acc))  #最终参数模型
                 save_parameters(model,filepath)
             model.train()
 
     #Test with specific model
-    # model_path=r"C:\Users\DELL\Desktop\CS420_ML_Project\test!!!!!checkpoint_model_epoch_1_acc_0.792208.pth"
+    # model_path=r"C:\Users\DELL\Desktop\CS420_ML_Project\checkpoint_model_epoch_1_acc_0.792208.pth"
     # model=My_model(resnet_type="resnet18",num_classes=25).to(device)
     # load_parameters(model,model_path,device)
     # total_test_acc=0
