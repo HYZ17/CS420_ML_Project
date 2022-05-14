@@ -21,9 +21,10 @@ class My_model(nn.Module):
         predicted_label=self.base_network(input)
         return predicted_label
 
-    def save_parameters(self,save_path):
-        torch.save(self.base_network.state_dict(),save_path)
+def save_parameters(model,save_path):
+    torch.save(model.state_dict(),save_path)
 
-    def load_parameters(self,load_path,device):
-        tmp=torch.load(load_path,map_location=device)
-        self.base_network.load_state_dict(tmp)
+
+def load_parameters(model,load_path,device):
+    tmp=torch.load(load_path,map_location=device)
+    model.load_state_dict(tmp)

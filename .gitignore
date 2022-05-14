@@ -5,3 +5,4 @@ __pycache__/Resnet.cpython-38.pyc
 __pycache__/dataloader.cpython-38.pyc
 *.pth
 *.xml
+test.py
