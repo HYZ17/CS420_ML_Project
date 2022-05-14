@@ -5,7 +5,7 @@ import random
 import numpy as np
 from tqdm import tqdm
 
-from Resnet import My_model
+from Resnet import My_model,save_parameters,load_parameters
 import os
 
 Batch_size=128
@@ -51,7 +51,6 @@ if __name__ == '__main__':
     for epoch in range(EPOCHS):
         total_train_loss=0
         total_train_acc=0
-        total_val_acc=0
         for i,batch in enumerate(tqdm(train_dataloader)):
             png_batch=batch[0].float().to(device)
             png_batch=png_batch / 255.0 * 2.0 - 1.0
@@ -69,8 +68,8 @@ if __name__ == '__main__':
             total_train_acc+=train_accuracy.item()
 
         print("Epoch:",epoch," Loss:",total_train_loss/train_dataset_size," Accuracy:",total_train_acc/train_dataset_size)
-
         if (epoch)%1==0:
+            total_val_acc=0
             model.eval()
             for i,batch in enumerate(tqdm(val_dataloader)):
                 png_batch=batch[0].float().to(device)
@@ -87,24 +86,26 @@ if __name__ == '__main__':
             print("In epoch",epoch,",Validation Accuracy:",val_acc)
             if val_acc>best_accuracy or epoch%10==0:
                 best_accuracy=val_acc
-                filepath=os.path.join('checkpoint_model_epoch_{}_acc_{}.pth'.format(epoch,val_acc))  #最终参数模型
-                model.save_parameters(filepath)
+                filepath=os.path.join('test!!!!!checkpoint_model_epoch_{}_acc_{}.pth'.format(epoch,val_acc))  #最终参数模型
+                save_parameters(model,filepath)
             model.train()
 
-
-
     #Test with specific model
-    # model_path=r"C:\Users\DELL\Desktop\CS420_ML_Project\checkpoint_model_epoch_10_acc_0.802896.pth"
-    # model=My_model(resnet_type="resnet18",num_classes=25).to(device)
-    # model.load_parameters(model_path,device)
-    # total_test_acc=0
-    # for i,batch in enumerate(tqdm(test_dataloader)):
-    #     data_batch=batch[0].float().to(device)
-    #     data_batch=data_batch/ 255.0 * 2.0 - 1.0
-    #     label_batch=batch[1].type(torch.LongTensor).to(device)
-    #     output=model(data_batch)
-    #     test_pred_y=torch.max(output.cpu(),1)[1].data.numpy()
-    #     test_accuracy=(test_pred_y==label_batch.cpu().data.numpy()).astype(int).sum()
-    #     total_test_acc+=test_accuracy.item()
-    # test_acc=total_test_acc/test_dataset_size
-    # print("Final Test Accuracy:",test_acc)
+    model_path=r"C:\Users\DELL\Desktop\CS420_ML_Project\checkpoint_model_epoch_6_acc_0.837504.pth"
+    model=My_model(resnet_type="resnet18",num_classes=25).to(device)
+    load_parameters(model,model_path,device)
+    total_test_acc=0
+    model.eval()
+    for i,batch in enumerate(tqdm(test_dataloader)):
+        png_batch=batch[0].float().to(device)
+        png_batch=png_batch/ 255.0 * 2.0 - 1.0
+        label_batch=batch[3].type(torch.LongTensor).to(device)
+        seq_batch=batch[1].float().to(device)
+        length_batch=batch[2].type(torch.int16).cpu()
+        output=model(png_batch,seq_batch,length_batch)
+        test_pred_y=torch.max(output.cpu(),1)[1].data.numpy()
+        test_accuracy=(test_pred_y==label_batch.cpu().data.numpy()).astype(int).sum()
+        total_test_acc+=test_accuracy.item()
+    test_acc=total_test_acc/test_dataset_size
+    model.train()
+    print("Final Test Accuracy:",test_acc)

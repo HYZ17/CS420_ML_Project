@@ -27,15 +27,15 @@ class My_model(nn.Module):
         #bidirectional，是否使用双向lstm，这里使用了
         self.lstm=nn.LSTM(
             input_size=3,
-            hidden_size=32,
-            num_layers=1,
+            hidden_size=64,
+            num_layers=2,
             bidirectional=True
         )
 
         #fc1的input_dim=lstm.hidden_size*2+self.base_network.fc.output_dim
-        #例如：320=2*32+256
+        #例如：384=64*2+256
         #fc1的输出维度可以调整
-        self.fc1=nn.Linear(320,128)
+        self.fc1=nn.Linear(384,128)
         self.relu=nn.ReLU()
 
         #fc2的输入维度和fc1的输出相对应，输出一定是25，因为有25个类
@@ -55,9 +55,11 @@ class My_model(nn.Module):
         x=self.fc2(x)
         return x
 
-    def save_parameters(self,save_path):
-        torch.save(self.base_network.state_dict(),save_path)
 
-    def load_parameters(self,load_path,device):
-        tmp=torch.load(load_path,map_location=device)
-        self.base_network.load_state_dict(tmp)
+def save_parameters(model,save_path):
+    torch.save(model.state_dict(),save_path)
+
+
+def load_parameters(model,load_path,device):
+    tmp=torch.load(load_path,map_location=device)
+    model.load_state_dict(tmp)
