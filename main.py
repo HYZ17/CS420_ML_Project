@@ -1,17 +1,30 @@
 import torch
 import torch.nn as nn
+import torch.optim as optim
+import torchvision
 from dataloader import MyDataset
 import random
 import numpy as np
 from tqdm import tqdm
 
-from Resnet import My_model,save_parameters,load_parameters
+from models.modelzoo import CNN_MODELS, CNN_IMAGE_SIZES
+from models.sketch_r2cnn import SketchR2CNN
+from neuralline.rasterize import Raster
+
 import os
+
+dropout = 0.5
+cnn_fn = 'resnet50'
+intensity_channels = 1
+thickness = 1.0
+imgsize = CNN_IMAGE_SIZES[cnn_fn]
 
 Batch_size=128
 device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 lr=0.0001
+weight_decay = -1
 EPOCHS=300
+
 def set_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
@@ -20,19 +33,37 @@ def set_seed(seed):
     np.random.seed(seed)
     random.seed(seed)
 
+def forward_batch(model, points, point_offsets, point_lengths, labels, mode, optimizer, criterion):
+    is_train = mode == 'train'
+
+    points = points.to(device)
+    points_offset = point_offsets.to(device)
+    points_length = point_lengths
+    category = labels.to(device)
+
+    if is_train:
+        optimizer.zero_grad()
+    with torch.set_grad_enabled(is_train):
+        logits, attention, images = model(points, points_offset, points_length)
+        loss = criterion(logits, category)
+        if is_train:
+            loss.backward()
+            optimizer.step()
+
+    return logits, loss, category
+
 
 
 if __name__ == '__main__':
     set_seed(17)
     print("We are using",device)
-    png_dir=r"C:\Users\DELL\Desktop\CS420_ML_Project\picture"
-    seq_dir=r"C:\Users\DELL\Desktop\CS420_ML_Project\original_dataset"
+    seq_dir=r"C:\Users\Administrator\Desktop\dataset"
     categories=['cow', 'panda', 'lion', 'tiger', 'raccoon', 'monkey', 'hedgehog', 'zebra', 'horse', 'owl','elephant', 'squirrel', 'sheep', 'dog', 'bear',
                 'kangaroo', 'whale', 'crocodile', 'rhinoceros', 'penguin', 'camel', 'flamingo', 'giraffe', 'pig','cat']
     # categories=['cow','panda']
-    train_dataset=MyDataset(png_dir,seq_dir,categories,"train",200)
-    val_dataset=MyDataset(png_dir,seq_dir,categories,"valid",200)
-    test_dataset=MyDataset(png_dir,seq_dir,categories,"test",200)
+    train_dataset=MyDataset(seq_dir,categories,"train",200)
+    val_dataset=MyDataset(seq_dir,categories,"valid",200)
+    test_dataset=MyDataset(seq_dir,categories,"test",200)
 
     train_dataset_size=train_dataset.__len__()
     val_dataset_size=val_dataset.__len__()
@@ -43,42 +74,38 @@ if __name__ == '__main__':
     test_dataloader=torch.utils.data.DataLoader(test_dataset,batch_size=Batch_size,num_workers=0,shuffle=True)
     print("Finish loading data!")
 
-    model=My_model(resnet_type="resnet18",num_classes=25).to(device)
-    optimizer=torch.optim.Adam(model.parameters(),lr=lr)
+    model = SketchR2CNN(CNN_MODELS[cnn_fn], 3, dropout, imgsize, thickness, 25, intensity_channels=intensity_channels, device = device)
+
+    optimizer=torch.optim.Adam(model.params_to_optimize(weight_decay, ['bias']), lr=lr)
     loss_func=nn.CrossEntropyLoss()
     best_accuracy=-1
 
     for epoch in range(EPOCHS):
         total_train_loss=0
         total_train_acc=0
+        model.train_mode()
         for i,batch in enumerate(tqdm(train_dataloader)):
-            png_batch=batch[0].float().to(device)
-            png_batch=png_batch / 255.0 * 2.0 - 1.0
-            label_batch=batch[3].type(torch.LongTensor).to(device)
-            seq_batch=batch[1].float().to(device)
+            point_batch=batch[0].float().to(device)
+            point_offset_batch = batch[1].float().to(device)
             length_batch=batch[2].type(torch.int16).cpu()
-            output=model(png_batch,seq_batch,length_batch)
-            loss=loss_func(output,label_batch)
+            label_batch=batch[3].type(torch.LongTensor).to(device)
+            logits, loss, gt_category = forward_batch(model, point_batch, point_offset_batch, length_batch, label_batch, 'train', optimizer, loss_func)
             total_train_loss+=loss.data.item()
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            train_pred_y=torch.max(output.cpu(),1)[1].data.numpy()
+            train_pred_y=torch.max(logits.cpu(),1)[1].data.numpy()
             train_accuracy=(train_pred_y==label_batch.cpu().data.numpy()).astype(int).sum()
             total_train_acc+=train_accuracy.item()
 
         print("Epoch:",epoch," Loss:",total_train_loss/train_dataset_size," Accuracy:",total_train_acc/train_dataset_size)
         if (epoch)%1==0:
             total_val_acc=0
-            model.eval()
+            model.eval_mode()
             for i,batch in enumerate(tqdm(val_dataloader)):
-                png_batch=batch[0].float().to(device)
-                png_batch=png_batch/ 255.0 * 2.0 - 1.0
-                label_batch=batch[3].type(torch.LongTensor).to(device)
-                seq_batch=batch[1].float().to(device)
+                point_batch=batch[0].float().to(device)
+                point_offset_batch = batch[1].float().to(device)
                 length_batch=batch[2].type(torch.int16).cpu()
-                output=model(png_batch,seq_batch,length_batch)
-                val_pred_y=torch.max(output.cpu(),1)[1].data.numpy()
+                label_batch=batch[3].type(torch.LongTensor).to(device)
+                logits, loss, gt_category = forward_batch(model, point_batch, point_offset_batch, length_batch, label_batch, 'val', optimizer, loss_func)
+                val_pred_y=torch.max(logits.cpu(),1)[1].data.numpy()
                 val_accuracy=(val_pred_y==label_batch.cpu().data.numpy()).astype(int).sum()
                 total_val_acc+=val_accuracy.item()
             val_acc=total_val_acc/val_dataset_size
@@ -86,9 +113,7 @@ if __name__ == '__main__':
             print("In epoch",epoch,",Validation Accuracy:",val_acc)
             if val_acc>best_accuracy or epoch%10==0:
                 best_accuracy=val_acc
-                filepath=os.path.join('checkpoint_model_epoch_{}_acc_{}.pth'.format(epoch,val_acc))  #最终参数模型
-                save_parameters(model,filepath)
-            model.train()
+                model.save('.', epoch)  #最终参数模型
 
     #Test with specific model
     # model_path=r"C:\Users\DELL\Desktop\CS420_ML_Project\checkpoint_model_epoch_1_acc_0.792208.pth"
