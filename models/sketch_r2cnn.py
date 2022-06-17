@@ -122,6 +122,7 @@ class SketchR2CNN(BaseModel):
         intensities, _ = self.rnn(points_offset, lengths)
 
         images = RasterIntensityFunc.apply(points, intensities, self.img_size, self.thickness, self.eps, self.device)
+        intensities = intensities.contiguous()
         if images.size(1) == 1:
             images = images.repeat(1, 3, 1, 1)
         cnnfeat = self.cnn(images)

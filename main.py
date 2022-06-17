@@ -19,7 +19,7 @@ intensity_channels = 1
 thickness = 1.0
 imgsize = CNN_IMAGE_SIZES[cnn_fn]
 
-Batch_size=128
+Batch_size=32
 device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 lr=0.0001
 weight_decay = -1
