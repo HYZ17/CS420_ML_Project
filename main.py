@@ -12,18 +12,18 @@ from models.sketch_r2cnn import SketchR2CNN
 from neuralline.rasterize import Raster
 from torch.utils.tensorboard import SummaryWriter
 import os
-os.environ['CUDA_VISIBLE_DEVICES']= "2,1,0"
+#os.environ['CUDA_VISIBLE_DEVICES']= "2,1,0"
 dropout = 0.5
 cnn_fn = 'resnet50'
 intensity_channels = 1
 thickness = 1.0
 imgsize = CNN_IMAGE_SIZES[cnn_fn]
 
-Batch_size=128
-device=torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+Batch_size=32
+device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 lr=0.0001
-weight_decay = -1
-EPOCHS=300
+weight_decay = 1e-4
+EPOCHS=30
 
 def set_seed(seed):
     torch.manual_seed(seed)
@@ -57,7 +57,7 @@ def forward_batch(model, points, point_offsets, point_lengths, labels, mode, opt
 if __name__ == '__main__':
     set_seed(17)
     print("We are using",device)
-    seq_dir=r"C:\Users\Administrator\Desktop\dataset"
+    seq_dir="./dataset"
     categories=['cow', 'panda', 'lion', 'tiger', 'raccoon', 'monkey', 'hedgehog', 'zebra', 'horse', 'owl','elephant', 'squirrel', 'sheep', 'dog', 'bear',
                 'kangaroo', 'whale', 'crocodile', 'rhinoceros', 'penguin', 'camel', 'flamingo', 'giraffe', 'pig','cat']
     # categories=['cow','panda']
@@ -134,8 +134,8 @@ if __name__ == '__main__':
             print("In epoch",epoch,",Validation Accuracy:",val_acc)
             if val_acc>best_accuracy or epoch%10==0:
                 best_accuracy=val_acc
-                filepath = os.path.join(log_path, 'acc_{}'.format(val_acc))  # 最终参数模型
-                model.save(filepath, epoch)
+                filepath = log_path  # 最终参数模型
+                model.save(filepath, train_step_counter, val_acc)
 
     #Test with specific model
     # model_path=r"C:\Users\DELL\Desktop\CS420_ML_Project\checkpoint_model_epoch_1_acc_0.792208.pth"

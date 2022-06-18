@@ -83,8 +83,8 @@ class BaseModel(object):
     def subnet_dict(self):
         return {self._net_names[i]: self._nets[i] for i in range(len(self._nets))}
 
-    def save(self, root_folder, iterations, prefix=''):
-        path_prefix = os.path.join(root_folder, prefix + '_iter_{}'.format(iterations))
+    def save(self, root_folder, iterations, val_acc, prefix=''):
+        path_prefix = os.path.join(root_folder, prefix + '_iter_{}'.format(iterations) + '_val_{}'.format(val_acc))
         res = list()
         for net, name in zip(self._nets, self._net_names):
             net_path = path_prefix + '_' + name + '.pth'
