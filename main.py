@@ -6,21 +6,21 @@ from dataloader import MyDataset
 import random
 import numpy as np
 from tqdm import tqdm
-
+import datetime
 from models.modelzoo import CNN_MODELS, CNN_IMAGE_SIZES
 from models.sketch_r2cnn import SketchR2CNN
 from neuralline.rasterize import Raster
-
+from torch.utils.tensorboard import SummaryWriter
 import os
-
+os.environ['CUDA_VISIBLE_DEVICES']= "2,1,0"
 dropout = 0.5
 cnn_fn = 'resnet50'
 intensity_channels = 1
 thickness = 1.0
 imgsize = CNN_IMAGE_SIZES[cnn_fn]
 
-Batch_size=32
-device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+Batch_size=128
+device=torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
 lr=0.0001
 weight_decay = -1
 EPOCHS=300
@@ -61,6 +61,12 @@ if __name__ == '__main__':
     categories=['cow', 'panda', 'lion', 'tiger', 'raccoon', 'monkey', 'hedgehog', 'zebra', 'horse', 'owl','elephant', 'squirrel', 'sheep', 'dog', 'bear',
                 'kangaroo', 'whale', 'crocodile', 'rhinoceros', 'penguin', 'camel', 'flamingo', 'giraffe', 'pig','cat']
     # categories=['cow','panda']
+    logdir = './output'
+    t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
+    log_file = f'seed_{17}_{t0}-_loss'
+    log_path = os.path.join(logdir, log_file)
+    writer = SummaryWriter(log_path)
+    writer.add_text("args", str('model_loss'))
     train_dataset=MyDataset(seq_dir,categories,"train",200)
     val_dataset=MyDataset(seq_dir,categories,"valid",200)
     test_dataset=MyDataset(seq_dir,categories,"test",200)
@@ -79,20 +85,30 @@ if __name__ == '__main__':
     optimizer=torch.optim.Adam(model.params_to_optimize(weight_decay, ['bias']), lr=lr)
     loss_func=nn.CrossEntropyLoss()
     best_accuracy=-1
-
+    train_step_counter = 0
+    val_step_counter = 0
     for epoch in range(EPOCHS):
         total_train_loss=0
         total_train_acc=0
         model.train_mode()
         for i,batch in enumerate(tqdm(train_dataloader)):
+            train_step_counter += 1
             point_batch=batch[0].float().to(device)
             point_offset_batch = batch[1].float().to(device)
             length_batch=batch[2].type(torch.int16).cpu()
             label_batch=batch[3].type(torch.LongTensor).to(device)
             logits, loss, gt_category = forward_batch(model, point_batch, point_offset_batch, length_batch, label_batch, 'train', optimizer, loss_func)
             total_train_loss+=loss.data.item()
+            writer.add_scalar("models_loss",
+                               torch.mean(loss),
+                               train_step_counter,
+                               )
             train_pred_y=torch.max(logits.cpu(),1)[1].data.numpy()
             train_accuracy=(train_pred_y==label_batch.cpu().data.numpy()).astype(int).sum()
+            writer.add_scalar("models_accuracy",
+                               train_accuracy.item()/Batch_size,
+                               train_step_counter,
+                               )
             total_train_acc+=train_accuracy.item()
 
         print("Epoch:",epoch," Loss:",total_train_loss/train_dataset_size," Accuracy:",total_train_acc/train_dataset_size)
@@ -100,6 +116,7 @@ if __name__ == '__main__':
             total_val_acc=0
             model.eval_mode()
             for i,batch in enumerate(tqdm(val_dataloader)):
+                val_step_counter += 1
                 point_batch=batch[0].float().to(device)
                 point_offset_batch = batch[1].float().to(device)
                 length_batch=batch[2].type(torch.int16).cpu()
@@ -107,13 +124,18 @@ if __name__ == '__main__':
                 logits, loss, gt_category = forward_batch(model, point_batch, point_offset_batch, length_batch, label_batch, 'val', optimizer, loss_func)
                 val_pred_y=torch.max(logits.cpu(),1)[1].data.numpy()
                 val_accuracy=(val_pred_y==label_batch.cpu().data.numpy()).astype(int).sum()
+                writer.add_scalar("models_validation_accuracy",
+                                  val_accuracy.item() / Batch_size,
+                                  val_step_counter,
+                                  )
                 total_val_acc+=val_accuracy.item()
             val_acc=total_val_acc/val_dataset_size
 
             print("In epoch",epoch,",Validation Accuracy:",val_acc)
             if val_acc>best_accuracy or epoch%10==0:
                 best_accuracy=val_acc
-                model.save('.', epoch)  #最终参数模型
+                filepath = os.path.join(log_path, 'acc_{}'.format(val_acc))  # 最终参数模型
+                model.save(filepath, epoch)
 
     #Test with specific model
     # model_path=r"C:\Users\DELL\Desktop\CS420_ML_Project\checkpoint_model_epoch_1_acc_0.792208.pth"
