@@ -1,5 +1,10 @@
 ## CS420_ML_Project
 
+#### Branch
+* 本项目一共包含三个branch，其中main分支包含了全部四个模型（CNN,RNN,Resnet,Resnet+RNN)的代码（默认调用Resnet，如果需要使用其他模型，可能需要修改main.py与dataloader.py)
+* Resnet+RNN分支包含了Resnet+RNN模型，切换到这个分支下，可以直接运行Resnet+RNN这个模型
+* Sketch-R2CNN分支下包含了实验性的R2CNN模型代码，可以切换到这个分支可以直接运行R2CNN模型
+
 #### Dataset
 
 * 原始数据集可以通过canvas链接直接下载，包含了时间等更多的信息
@@ -17,16 +22,3 @@ torchvision
 tqdm
 ```
 
-#### Update
-
-* 添加了data loader和Resnet分类模型（5.12）
-* 使用pre-trained模型，对输入的图片进行归一化，准确率80.5%（5.13）
-* 添加一个新的分支，同时使用了resnet和rnn，效果明显提升，截至目前准确度83.8%（5.14）
-* 修复bug：模型参数保存不完整（5.14）
-
-#### To Do
-* 在已有的基础上，写一个只使用了LSTM，输入序列信息的模型，这样就可以对比CNN，LSTM，CNN+LSTM三个的性能
-* 调试模型的参数，充分发挥每一个模型的性能
-* 运行代码，搜集三个模型对应的最优checkpoint，搜集它们的log；使用搜集的log进行画图（正则表达式提取数据），将三个模型的loss，acc画在一起，方便report中进行分析
-* 把三个模型整合到main branch中，方便老师查看（完全可行，使用一个data loader，定义多个model即可）
-* 报告撰写（三个人一起写）
